@@ -2,178 +2,208 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>図形合わせトレーニング - 決定版</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>図形合わせ1st - 設定機能付き版</title>
     <style>
-        body { text-align: center; font-family: sans-serif; background: #fdf5e6; padding: 20px; color: #5a4a42; }
-        .container { display: flex; justify-content: center; gap: 20px; margin-bottom: 20px; }
-        canvas { border: 5px solid #8fbeb3; background: white; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        #timer { font-size: 28px; color: #e57373; font-weight: bold; margin-bottom: 10px; border: 2px solid #e57373; display: inline-block; padding: 5px 20px; border-radius: 20px; min-width: 120px; background: white; }
-        #counter { font-size: 20px; margin-bottom: 10px; font-weight: bold; }
+        body { 
+            text-align: center; font-family: sans-serif; background: #eef9f6; 
+            margin: 0; padding: 10px; overflow: hidden; touch-action: none; 
+            -webkit-user-select: none; user-select: none;
+        }
+        .header { background: white; padding: 10px; border-radius: 10px; margin-bottom: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        h1 { font-size: 18px; margin: 0; color: #4a90e2; }
         
-        .settings { margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 15px; display: inline-block; box-shadow: 0 2px 5px rgba(0,0,0,0.1); text-align: left; }
-        .setting-item { margin: 8px 0; }
-        input[type="range"] { width: 150px; cursor: pointer; vertical-align: middle; }
+        #game-canvas { background: #ffffff; border: 3px solid #4a90e2; border-radius: 15px; cursor: pointer; max-width: 100%; height: auto; display: block; margin: 0 auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         
-        #start-btn { background: #ff7043; font-size: 24px; padding: 12px 50px; border-radius: 12px; color: white; border: none; cursor: pointer; margin-bottom: 20px; box-shadow: 0 4px #d84315; }
-        #start-btn:active { transform: translateY(2px); box-shadow: 0 2px #d84315; }
-        #start-btn:disabled { background: #ccc; box-shadow: none; cursor: not-allowed; }
+        .controls { margin-top: 10px; }
+        button { background: #4a90e2; color: white; border: none; padding: 12px 30px; font-size: 18px; border-radius: 10px; box-shadow: 0 4px #357abd; cursor: pointer; margin: 5px; }
         
-        .ans-btn { padding: 15px 45px; font-size: 24px; cursor: pointer; border-radius: 12px; border: none; color: white; margin: 10px; transition: 0.2s; box-shadow: 0 4px rgba(0,0,0,0.2); }
-        .btn-same { background: #ffb74d; }
-        .btn-diff { background: #64b5f6; }
-        .ans-btn:active { transform: translateY(2px); box-shadow: none; }
-        .ans-btn:disabled { background: #ccc; cursor: not-allowed; box-shadow: none; }
+        /* 設定画面 */
+        #setup { background: white; padding: 20px; border-radius: 15px; display: inline-block; margin-top: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: left; }
+        #setup h1 { font-size: 22px; text-align: center; margin-bottom: 10px; }
+        .setting-item { margin: 15px 0; font-size: 18px; font-weight: bold; }
+        input[type="range"] { width: 160px; vertical-align: middle; margin-left: 10px; }
+        
+        #status-bar { font-size: 18px; font-weight: bold; margin-bottom: 5px; display: none; }
+        #timer { color: #e57373; font-size: 24px; }
+        #msg { font-size: 24px; font-weight: bold; margin-top: 10px; min-height: 35px; }
     </style>
 </head>
 <body>
 
-    <h1>図形合わせトレーニング</h1>
-
-    <div class="settings">
-        <div class="setting-item">
-            <span>⏱ 制限時間：</span>
-            <input type="range" id="time-slider" min="1" max="30" value="10" oninput="document.getElementById('t-val').innerText = this.value">
-            <span id="t-val" style="font-weight:bold; font-size: 20px;">10</span>秒
-        </div>
-        <div class="setting-item">
-            <span>枚数：</span>
-            <input type="range" id="count-slider" min="1" max="10" value="5" oninput="document.getElementById('c-val').innerText = this.value">
-            <span id="c-val" style="font-weight:bold; font-size: 20px;">5</span>枚
-        </div>
+<div id="setup">
+    <h1>1stステージ設定</h1>
+    <p style="text-align:center; color:#4a90e2; font-weight:bold;">同じ形をタップしてね！</p>
+    <div class="setting-item">
+        ⏱ 制限時間：<input type="range" id="time-slider" min="5" max="60" value="30" oninput="document.getElementById('t-val').innerText = this.value">
+        <span id="t-val">30</span>秒
     </div>
-    <br>
-
-    <button id="start-btn" onclick="gameStart()">▶︎ コース開始！</button>
-
-    <div id="counter">問題： <span id="current-q">--</span> / <span id="total-q">--</span></div>
-    <div id="timer">あと <span id="time-left">--</span> 秒</div>
-
-    <div class="container">
-        <div><p>【見本】</p><canvas id="canvas-right" width="300" height="300"></canvas></div>
-        <div><p>【これどう？】</p><canvas id="canvas-left" width="300" height="300"></canvas></div>
+    <div class="setting-item">
+        🔢 問題数：<input type="range" id="count-slider" min="1" max="10" value="5" oninput="document.getElementById('c-val').innerText = this.value">
+        <span id="c-val">5</span>枚
     </div>
-
-    <div>
-        <button id="same-btn" class="ans-btn btn-same" onclick="check(true)" disabled>同じ！</button>
-        <button id="diff-btn" class="ans-btn btn-diff" onclick="check(false)" disabled>違う！</button>
+    <div style="text-align:center;">
+        <button onclick="startGame()">▶︎ 練習開始！</button>
     </div>
+</div>
 
-    <script>
-        let timeLeft = 0;
-        let totalQuestions = 0;
-        let currentQuestionNum = 0;
-        let correctCount = 0;
-        let answerIsSame = true;
-        let timerId = null;
+<div id="game-area" style="display:none;">
+    <div id="status-bar">
+        <span id="current-q">1</span> / <span id="total-q">5</span> 問目 ｜ 
+        <span id="timer">あと <span id="time-left">30</span>秒</span>
+    </div>
+    <canvas id="game-canvas" width="900" height="550"></canvas>
+    <div class="controls">
+        <button id="retry-btn" onclick="backToSetup()" style="background: #8fbeb3; box-shadow: 0 4px #6a9a8f; display: none;">もう一度設定する</button>
+    </div>
+    <div id="msg"></div>
+</div>
 
-        const shapePool = [
-            {name: 'circle', color: 'orange'},
-            {name: 'rect', color: 'skyblue'},
-            {name: 'triangle', color: 'green'},
-            {name: 'diamond', color: 'purple'},
-            {name: 'cross', color: 'red'}
-        ];
+<script>
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+    let targetShape = null, options = [];
+    let timeLeft, totalQuestions, currentNum, correctCount, timerId;
+    let isGameRunning = false;
 
-        function gameStart() {
-            totalQuestions = parseInt(document.getElementById('count-slider').value);
-            currentQuestionNum = 1;
-            correctCount = 0;
-            document.getElementById('total-q').innerText = totalQuestions;
-            document.getElementById('start-btn').disabled = true;
-            nextQuestion();
+    const shapeTypes = [
+        { name: 'circle', color: 'orange' },
+        { name: 'rect', color: 'skyblue' },
+        { name: 'triangle', color: 'green' },
+        { name: 'diamond', color: 'purple' },
+        { name: 'cross', color: 'red' }
+    ];
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        if (!isGameRunning && currentNum > totalQuestions) return;
+
+        // 見本エリア（上）
+        ctx.fillStyle = '#f9f9f9'; ctx.fillRect(350, 50, 200, 200);
+        ctx.strokeStyle = '#4a90e2'; ctx.lineWidth = 3; ctx.strokeRect(350, 50, 200, 200);
+        ctx.fillStyle = '#4a90e2'; ctx.font = 'bold 20px sans-serif';
+        ctx.fillText('これと同じ形は？', 370, 40);
+
+        if(targetShape) drawShape(targetShape.type, targetShape.color, 450, 150, 60);
+
+        // 選択肢エリア（下）
+        options.forEach(s => drawShape(s.type, s.color, s.x, s.y, 50));
+    }
+
+    function drawShape(type, color, x, y, size) {
+        ctx.fillStyle = color; ctx.strokeStyle = color; ctx.lineWidth = 8; ctx.lineCap = 'round';
+        ctx.beginPath();
+        if(type === 'circle') ctx.arc(x, y, size, 0, Math.PI*2);
+        else if(type === 'rect') ctx.rect(x-size, y-size, size*2, size*2);
+        else if(type === 'triangle') { ctx.moveTo(x, y-size-5); ctx.lineTo(x-size-5, y+size); ctx.lineTo(x+size+5, y+size); ctx.closePath(); }
+        else if(type === 'diamond') { ctx.moveTo(x, y-size-10); ctx.lineTo(x-size, y); ctx.lineTo(x, y+size+10); ctx.lineTo(x+size, y); ctx.closePath(); }
+        else if(type === 'cross') { ctx.moveTo(x-size, y-size); ctx.lineTo(x+size, y+size); ctx.moveTo(x+size, y-size); ctx.lineTo(x-size, y+size); }
+        
+        if (type === 'cross') ctx.stroke();
+        else { ctx.fill(); ctx.stroke(); }
+    }
+
+    function createProblem() {
+        // 見本をランダムに決定
+        const targetInfo = shapeTypes[Math.floor(Math.random() * shapeTypes.length)];
+        targetShape = { type: targetInfo.name, color: targetInfo.color };
+
+        // 選択肢をシャッフルして配置
+        options = [];
+        const shuffled = [...shapeTypes].sort(() => Math.random() - 0.5);
+        shuffled.forEach((info, i) => {
+            options.push({ type: info.name, color: info.color, x: 150 + (i * 150), y: 400 });
+        });
+    }
+
+    function startGame() {
+        totalQuestions = parseInt(document.getElementById('count-slider').value);
+        currentNum = 1; correctCount = 0;
+        document.getElementById('setup').style.display = 'none';
+        document.getElementById('game-area').style.display = 'block';
+        document.getElementById('status-bar').style.display = 'block';
+        document.getElementById('total-q').innerText = totalQuestions;
+        nextRound();
+    }
+
+    function nextRound() {
+        if (currentNum > totalQuestions) { showResult(); return; }
+        document.getElementById('current-q').innerText = currentNum;
+        document.getElementById('msg').innerText = "";
+        timeLeft = parseInt(document.getElementById('time-slider').value);
+        document.getElementById('time-left').innerText = timeLeft;
+        isGameRunning = true;
+        createProblem(); draw(); startTimer();
+    }
+
+    function startTimer() {
+        if(timerId) clearInterval(timerId);
+        timerId = setInterval(() => {
+            timeLeft--; document.getElementById('time-left').innerText = timeLeft;
+            if(timeLeft <= 0) { clearInterval(timerId); checkAnswer(null); }
+        }, 1000);
+    }
+
+    function checkAnswer(clickedType) {
+        if (!isGameRunning) return;
+        clearInterval(timerId); isGameRunning = false;
+
+        if (clickedType === null) {
+            document.getElementById('msg').innerText = "⏰ タイムアップ！";
+            document.getElementById('msg').style.color = "#ff9800";
+        } else if (clickedType === targetShape.type) {
+            correctCount++;
+            document.getElementById('msg').innerText = "✨ 正解！ ✨";
+            document.getElementById('msg').style.color = "#4caf50";
+        } else {
+            document.getElementById('msg').innerText = "❌ ちがう形だよ";
+            document.getElementById('msg').style.color = "#e57373";
         }
+        
+        currentNum++;
+        setTimeout(nextRound, 1200);
+    }
 
-        function nextQuestion() {
-            if (currentQuestionNum > totalQuestions) {
-                finishGame();
-                return;
+    function showResult() {
+        isGameRunning = false;
+        document.getElementById('status-bar').style.display = 'none';
+        document.getElementById('msg').innerHTML = `🏁 終了！<br><span style="font-size:32px;">${totalQuestions}問中 ${correctCount}問正解！</span>`;
+        document.getElementById('msg').style.color = "#5a4a42";
+        document.getElementById('retry-btn').style.display = 'inline-block';
+        targetShape = null; options = [];
+        draw();
+    }
+
+    function backToSetup() {
+        document.getElementById('setup').style.display = 'inline-block';
+        document.getElementById('game-area').style.display = 'none';
+        document.getElementById('retry-btn').style.display = 'none';
+        document.getElementById('msg').innerText = "";
+    }
+
+    // タップ・クリック判定
+    function getMousePos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const cx = e.touches ? e.touches[0].clientX : e.clientX;
+        const cy = e.touches ? e.touches[0].clientY : e.clientY;
+        return { x: (cx - rect.left) * scaleX, y: (cy - rect.top) * scaleY };
+    }
+
+    function handleInput(e) {
+        if (!isGameRunning) return;
+        const pos = getMousePos(e);
+        options.forEach(s => {
+            if (Math.sqrt((pos.x - s.x) ** 2 + (pos.y - s.y) ** 2) < 60) {
+                checkAnswer(s.type);
             }
-            document.getElementById('current-q').innerText = currentQuestionNum;
-            document.getElementById('same-btn').disabled = false;
-            document.getElementById('diff-btn').disabled = false;
-            timeLeft = parseInt(document.getElementById('time-slider').value);
-            document.getElementById('time-left').innerText = timeLeft;
-            drawGame();
-            
-            if(timerId) clearInterval(timerId);
-            timerId = setInterval(() => {
-                timeLeft--;
-                document.getElementById('time-left').innerText = timeLeft;
-                if(timeLeft <= 0) {
-                    clearInterval(timerId);
-                    alert("タイムアップ！");
-                    currentQuestionNum++;
-                    nextQuestion();
-                }
-            }, 1000);
-        }
+        });
+    }
 
-        function drawGame() {
-            const ctxR = document.getElementById('canvas-right').getContext('2d');
-            const ctxL = document.getElementById('canvas-left').getContext('2d');
-            
-            let shapesR = [];
-            let poolCopy = [...shapePool];
-            for(let i=0; i<3; i++) {
-                let randomIndex = Math.floor(Math.random() * poolCopy.length);
-                shapesR.push(poolCopy.splice(randomIndex, 1)[0]);
-            }
-
-            answerIsSame = Math.random() > 0.5;
-            let shapesL = [];
-            if (answerIsSame) {
-                shapesL = [...shapesR];
-            } else {
-                shapesL = [...shapesR];
-                let replaceIndex = Math.floor(Math.random() * 3);
-                let newShape = poolCopy[Math.floor(Math.random() * poolCopy.length)];
-                shapesL[replaceIndex] = newShape;
-            }
-
-            shapesR.sort(() => Math.random() - 0.5);
-            shapesL.sort(() => Math.random() - 0.5);
-
-            function paint(ctx, list) {
-                ctx.clearRect(0,0,300,300);
-                list.forEach((shapeObj, i) => {
-                    let y = 60 + (i * 90);
-                    let shape = shapeObj.name;
-                    ctx.fillStyle = shapeObj.color;
-                    ctx.strokeStyle = shapeObj.color;
-                    ctx.lineWidth = 10;
-                    ctx.beginPath();
-                    if(shape === 'circle') { ctx.arc(150, y, 30, 0, Math.PI*2); ctx.fill(); }
-                    else if(shape === 'rect') { ctx.fillRect(120, y-30, 60, 60); }
-                    else if(shape === 'triangle') { ctx.moveTo(150, y-30); ctx.lineTo(120, y+30); ctx.lineTo(180, y+30); ctx.fill(); }
-                    else if(shape === 'diamond') { ctx.moveTo(150, y-35); ctx.lineTo(115, y); ctx.lineTo(150, y+35); ctx.lineTo(185, y); ctx.closePath(); ctx.fill(); }
-                    else if(shape === 'cross') { ctx.moveTo(120, y-30); ctx.lineTo(180, y+30); ctx.moveTo(180, y-30); ctx.lineTo(120, y+30); ctx.stroke(); }
-                });
-            }
-            paint(ctxR, shapesR);
-            paint(ctxL, shapesL);
-        }
-
-        function check(userChoice) {
-            clearInterval(timerId);
-            if(userChoice === answerIsSame) { correctCount++; alert("✨ 正解！ ✨"); }
-            else { alert("❌ 残念！ ❌"); }
-            currentQuestionNum++;
-            nextQuestion();
-        }
-
-        function finishGame() {
-            clearInterval(timerId);
-            alert("お疲れ様でした！\n結果は " + totalQuestions + " 問中、 " + correctCount + " 問正解でした！");
-            document.getElementById('start-btn').disabled = false;
-            document.getElementById('same-btn').disabled = true;
-            document.getElementById('diff-btn').disabled = true;
-            document.getElementById('current-q').innerText = "--";
-            document.getElementById('time-left').innerText = "--";
-            const ctxR = document.getElementById('canvas-right').getContext('2d');
-            const ctxL = document.getElementById('canvas-left').getContext('2d');
-            ctxR.clearRect(0,0,300,300);
-            ctxL.clearRect(0,0,300,300);
-        }
-    </script>
+    canvas.addEventListener('mousedown', handleInput);
+    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleInput(e); }, {passive: false});
+</script>
 </body>
 </html>
