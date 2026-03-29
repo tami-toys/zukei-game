@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>図形合わせトレーニング - 決定版</title>
+    <style>
+        body { text-align: center; font-family: sans-serif; background: #fdf5e6; padding: 20px; color: #5a4a42; }
+        .container { display: flex; justify-content: center; gap: 20px; margin-bottom: 20px; }
+        canvas { border: 5px solid #8fbeb3; background: white; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        #timer { font-size: 28px; color: #e57373; font-weight: bold; margin-bottom: 10px; border: 2px solid #e57373; display: inline-block; padding: 5px 20px; border-radius: 20px; min-width: 120px; background: white; }
+        #counter { font-size: 20px; margin-bottom: 10px; font-weight: bold; }
+        
+        .settings { margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 15px; display: inline-block; box-shadow: 0 2px 5px rgba(0,0,0,0.1); text-align: left; }
+        .setting-item { margin: 8px 0; }
+        input[type="range"] { width: 150px; cursor: pointer; vertical-align: middle; }
+        
+        #start-btn { background: #ff7043; font-size: 24px; padding: 12px 50px; border-radius: 12px; color: white; border: none; cursor: pointer; margin-bottom: 20px; box-shadow: 0 4px #d84315; }
+        #start-btn:active { transform: translateY(2px); box-shadow: 0 2px #d84315; }
+        #start-btn:disabled { background: #ccc; box-shadow: none; cursor: not-allowed; }
+        
+        .ans-btn { padding: 15px 45px; font-size: 24px; cursor: pointer; border-radius: 12px; border: none; color: white; margin: 10px; transition: 0.2s; box-shadow: 0 4px rgba(0,0,0,0.2); }
+        .btn-same { background: #ffb74d; }
+        .btn-diff { background: #64b5f6; }
+        .ans-btn:active { transform: translateY(2px); box-shadow: none; }
+        .ans-btn:disabled { background: #ccc; cursor: not-allowed; box-shadow: none; }
+    </style>
+</head>
+<body>
+
+    <h1>図形合わせトレーニング</h1>
+
+    <div class="settings">
+        <div class="setting-item">
+            <span>⏱ 制限時間：</span>
+            <input type="range" id="time-slider" min="1" max="30" value="10" oninput="document.getElementById('t-val').innerText = this.value">
+            <span id="t-val" style="font-weight:bold; font-size: 20px;">10</span>秒
+        </div>
+        <div class="setting-item">
+            <span>枚数：</span>
+            <input type="range" id="count-slider" min="1" max="10" value="5" oninput="document.getElementById('c-val').innerText = this.value">
+            <span id="c-val" style="font-weight:bold; font-size: 20px;">5</span>枚
+        </div>
+    </div>
+    <br>
+
+    <button id="start-btn" onclick="gameStart()">▶︎ コース開始！</button>
+
+    <div id="counter">問題： <span id="current-q">--</span> / <span id="total-q">--</span></div>
+    <div id="timer">あと <span id="time-left">--</span> 秒</div>
+
+    <div class="container">
+        <div><p>【見本】</p><canvas id="canvas-right" width="300" height="300"></canvas></div>
+        <div><p>【これどう？】</p><canvas id="canvas-left" width="300" height="300"></canvas></div>
+    </div>
+
+    <div>
+        <button id="same-btn" class="ans-btn btn-same" onclick="check(true)" disabled>同じ！</button>
+        <button id="diff-btn" class="ans-btn btn-diff" onclick="check(false)" disabled>違う！</button>
+    </div>
+
+    <script>
+        let timeLeft = 0;
+        let totalQuestions = 0;
+        let currentQuestionNum = 0;
+        let correctCount = 0;
+        let answerIsSame = true;
+        let timerId = null;
+
+        const shapePool = [
+            {name: 'circle', color: 'orange'},
+            {name: 'rect', color: 'skyblue'},
+            {name: 'triangle', color: 'green'},
+            {name: 'diamond', color: 'purple'},
+            {name: 'cross', color: 'red'}
+        ];
+
+        function gameStart() {
+            totalQuestions = parseInt(document.getElementById('count-slider').value);
+            currentQuestionNum = 1;
+            correctCount = 0;
+            document.getElementById('total-q').innerText = totalQuestions;
+            document.getElementById('start-btn').disabled = true;
+            nextQuestion();
+        }
+
+        function nextQuestion() {
+            if (currentQuestionNum > totalQuestions) {
+                finishGame();
+                return;
+            }
+            document.getElementById('current-q').innerText = currentQuestionNum;
+            document.getElementById('same-btn').disabled = false;
+            document.getElementById('diff-btn').disabled = false;
+            timeLeft = parseInt(document.getElementById('time-slider').value);
+            document.getElementById('time-left').innerText = timeLeft;
+            drawGame();
+            
+            if(timerId) clearInterval(timerId);
+            timerId = setInterval(() => {
+                timeLeft--;
+                document.getElementById('time-left').innerText = timeLeft;
+                if(timeLeft <= 0) {
+                    clearInterval(timerId);
+                    alert("タイムアップ！");
+                    currentQuestionNum++;
+                    nextQuestion();
+                }
+            }, 1000);
+        }
+
+        function drawGame() {
+            const ctxR = document.getElementById('canvas-right').getContext('2d');
+            const ctxL = document.getElementById('canvas-left').getContext('2d');
+            
+            let shapesR = [];
+            let poolCopy = [...shapePool];
+            for(let i=0; i<3; i++) {
+                let randomIndex = Math.floor(Math.random() * poolCopy.length);
+                shapesR.push(poolCopy.splice(randomIndex, 1)[0]);
+            }
+
+            answerIsSame = Math.random() > 0.5;
+            let shapesL = [];
+            if (answerIsSame) {
+                shapesL = [...shapesR];
+            } else {
+                shapesL = [...shapesR];
+                let replaceIndex = Math.floor(Math.random() * 3);
+                let newShape = poolCopy[Math.floor(Math.random() * poolCopy.length)];
+                shapesL[replaceIndex] = newShape;
+            }
+
+            shapesR.sort(() => Math.random() - 0.5);
+            shapesL.sort(() => Math.random() - 0.5);
+
+            function paint(ctx, list) {
+                ctx.clearRect(0,0,300,300);
+                list.forEach((shapeObj, i) => {
+                    let y = 60 + (i * 90);
+                    let shape = shapeObj.name;
+                    ctx.fillStyle = shapeObj.color;
+                    ctx.strokeStyle = shapeObj.color;
+                    ctx.lineWidth = 10;
+                    ctx.beginPath();
+                    if(shape === 'circle') { ctx.arc(150, y, 30, 0, Math.PI*2); ctx.fill(); }
+                    else if(shape === 'rect') { ctx.fillRect(120, y-30, 60, 60); }
+                    else if(shape === 'triangle') { ctx.moveTo(150, y-30); ctx.lineTo(120, y+30); ctx.lineTo(180, y+30); ctx.fill(); }
+                    else if(shape === 'diamond') { ctx.moveTo(150, y-35); ctx.lineTo(115, y); ctx.lineTo(150, y+35); ctx.lineTo(185, y); ctx.closePath(); ctx.fill(); }
+                    else if(shape === 'cross') { ctx.moveTo(120, y-30); ctx.lineTo(180, y+30); ctx.moveTo(180, y-30); ctx.lineTo(120, y+30); ctx.stroke(); }
+                });
+            }
+            paint(ctxR, shapesR);
+            paint(ctxL, shapesL);
+        }
+
+        function check(userChoice) {
+            clearInterval(timerId);
+            if(userChoice === answerIsSame) { correctCount++; alert("✨ 正解！ ✨"); }
+            else { alert("❌ 残念！ ❌"); }
+            currentQuestionNum++;
+            nextQuestion();
+        }
+
+        function finishGame() {
+            clearInterval(timerId);
+            alert("お疲れ様でした！\n結果は " + totalQuestions + " 問中、 " + correctCount + " 問正解でした！");
+            document.getElementById('start-btn').disabled = false;
+            document.getElementById('same-btn').disabled = true;
+            document.getElementById('diff-btn').disabled = true;
+            document.getElementById('current-q').innerText = "--";
+            document.getElementById('time-left').innerText = "--";
+            const ctxR = document.getElementById('canvas-right').getContext('2d');
+            const ctxL = document.getElementById('canvas-left').getContext('2d');
+            ctxR.clearRect(0,0,300,300);
+            ctxL.clearRect(0,0,300,300);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>図形合わせ2nd - 安定動作版</title>
+    <script src="https://unpkg.com/konva@9/konva.min.js"></script>
+    <style>
+        body { text-align: center; font-family: sans-serif; background: #fdf5e6; margin: 0; padding: 20px; color: #5a4a42; }
+        #stage-container { background: #e0e0e0; border: 5px solid #8fbeb3; display: inline-block; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .settings { margin-bottom: 15px; background: #fff; padding: 15px; border-radius: 15px; display: inline-block; box-shadow: 0 2px 5px rgba(0,0,0,0.1); text-align: left; }
+        .setting-item { margin: 8px 0; }
+        input[type="range"] { width: 150px; vertical-align: middle; }
+        #timer { font-size: 28px; color: #e57373; font-weight: bold; margin: 10px 0; border: 2px solid #e57373; display: inline-block; padding: 5px 20px; border-radius: 20px; background: white; }
+        #start-btn { background: #ff7043; color: white; border: none; padding: 12px 50px; font-size: 24px; border-radius: 12px; cursor: pointer; margin-bottom: 15px; box-shadow: 0 4px #d84315; }
+        #start-btn:disabled { background: #ccc; box-shadow: none; }
+        #judge-btn { background: #64b5f6; color: white; border: none; padding: 15px 50px; font-size: 22px; border-radius: 12px; cursor: pointer; display: none; margin: 15px auto; box-shadow: 0 4px #0288d1; }
+        #msg { font-size: 24px; font-weight: bold; margin-top: 10px; height: 35px; }
+    </style>
+</head>
+<body>
+
+    <h1>図形合わせ：2ndステージ</h1>
+
+    <div id="setup-area" class="settings">
+        <div class="setting-item">
+            <span>⏱ 制限時間：</span>
+            <input type="range" id="time-slider" min="5" max="60" value="30" oninput="document.getElementById('t-val').innerText = this.value">
+            <span id="t-val" style="font-weight:bold; font-size:20px;">30</span>秒
+        </div>
+        <div class="setting-item">
+            <span>枚数：</span>
+            <input type="range" id="count-slider" min="1" max="10" value="3" oninput="document.getElementById('c-val').innerText = this.value">
+            <span id="c-val" style="font-weight:bold; font-size:20px;">3</span>枚
+        </div>
+        <button id="start-btn" onclick="gameStart()">▶︎ コース開始！</button>
+    </div>
+
+    <div id="game-status" style="display:none;">
+        <div style="font-size:20px; font-weight:bold;">問題： <span id="current-q">--</span> / <span id="total-q">--</span></div>
+        <div id="timer">あと <span id="time-left">--</span> 秒</div>
+    </div>
+
+    <div id="stage-container"></div>
+    
+    <button id="judge-btn" onclick="checkAnswer()">これで判定！</button>
+    <div id="msg"></div>
+
+    <script>
+        const stage = new Konva.Stage({ container: 'stage-container', width: 800, height: 450 });
+        const layer = new Konva.Layer();
+        stage.add(layer);
+
+        const boxSize = 340;
+        const leftBoxPos = { x: 30, y: 50 };   
+        const rightBoxPos = { x: 430, y: 50 }; 
+
+        let timeLeft, totalQuestions, currentNum, correctCount, timerId;
+        let targetTypes = []; // 今回の正解図形の名前リスト
+        let userPieces = [];  // 全5つの動かせる図形
+
+        const allShapesInfo = [
+            { type: 'circle', color: 'orange' },
+            { type: 'rect', color: 'skyblue' },
+            { type: 'triangle', color: 'green' },
+            { type: 'diamond', color: 'purple' },
+            { type: 'cross', color: 'red' }
+        ];
+
+        function gameStart() {
+            totalQuestions = parseInt(document.getElementById('count-slider').value);
+            currentNum = 1;
+            correctCount = 0;
+            document.getElementById('setup-area').style.display = 'none';
+            document.getElementById('game-status').style.display = 'block';
+            document.getElementById('judge-btn').style.display = 'block';
+            document.getElementById('total-q').innerText = totalQuestions;
+            nextQuestion();
+        }
+
+        function nextQuestion() {
+            if (currentNum > totalQuestions) {
+                finishGame();
+                return;
+            }
+            document.getElementById('current-q').innerText = currentNum;
+            document.getElementById('msg').innerText = "";
+            timeLeft = parseInt(document.getElementById('time-slider').value);
+            document.getElementById('time-left').innerText = timeLeft;
+            createProblem();
+            startTimer();
+        }
+
+        // 図形を生成する共通関数
+        function makeShape(type, color, x, y, isDraggable, size) {
+            let s;
+            const config = { x, y, fill: color, draggable: isDraggable, name: type };
+            if (type === 'circle') {
+                s = new Konva.Circle({ ...config, radius: size });
+            } else if (type === 'rect') {
+                s = new Konva.Rect({ ...config, width: size*2, height: size*2, offsetX: size, offsetY: size });
+            } else if (type === 'triangle') {
+                s = new Konva.RegularPolygon({ ...config, sides: 3, radius: size + 5 });
+            } else if (type === 'diamond') {
+                s = new Konva.RegularPolygon({ ...config, sides: 4, radius: size + 5, scaleY: 1.2 });
+            } else if (type === 'cross') {
+                s = new Konva.Group({ ...config });
+                s.add(new Konva.Line({ points: [-size, -size, size, size], stroke: color, strokeWidth: 8 }));
+                s.add(new Konva.Line({ points: [size, -size, -size, size], stroke: color, strokeWidth: 8 }));
+            }
+            return s;
+        }
+
+        function createProblem() {
+            layer.destroyChildren();
+            userPieces = [];
+            targetTypes = [];
+
+            // 背景
+            layer.add(new Konva.Rect({ x: leftBoxPos.x, y: leftBoxPos.y, width: boxSize, height: boxSize, fill: 'white', stroke: '#8fbeb3', strokeWidth: 5, cornerRadius: 10 }));
+            layer.add(new Konva.Rect({ x: rightBoxPos.x, y: rightBoxPos.y, width: boxSize, height: boxSize, fill: '#eee', stroke: '#999', strokeWidth: 2, cornerRadius: 10 }));
+
+            // 1. 正解の3つを選ぶ
+            let pool = [...allShapesInfo];
+            let chosen = [];
+            for(let i=0; i<3; i++) {
+                let idx = Math.floor(Math.random() * pool.length);
+                let item = pool.splice(idx, 1)[0];
+                chosen.push(item);
+                targetTypes.push(item.type);
+            }
+
+            // 2. 見本を描画（右）
+            chosen.forEach(q => {
+                let rx = rightBoxPos.x + 50 + Math.random() * (boxSize - 100);
+                let ry = rightBoxPos.y + 50 + Math.random() * (boxSize - 100);
+                let s = makeShape(q.type, q.color, rx, ry, false, 30);
+                s.opacity(0.4);
+                layer.add(s);
+            });
+
+            // 3. 選択肢を描画（左端）
+            allShapesInfo.forEach((info, i) => {
+                let p = makeShape(info.type, info.color, 60, 70 + (i * 75), true, 25);
+                userPieces.push(p);
+                layer.add(p);
+            });
+
+            layer.batchDraw();
+        }
+
+        function checkAnswer() {
+            clearInterval(timerId);
+            // 白い箱（左）に入っている図形を判定
+            let inBoxShapes = userPieces.filter(p => {
+                return (p.x() > leftBoxPos.x && p.x() < leftBoxPos.x + boxSize &&
+                        p.y() > leftBoxPos.y && p.y() < leftBoxPos.y + boxSize);
+            }).map(p => p.name());
+
+            // 判定：種類が完全に一致（位置不問）
+            let isCorrect = (inBoxShapes.length === targetTypes.length) && 
+                            targetTypes.every(t => inBoxShapes.includes(t));
+
+            if (isCorrect) {
+                correctCount++;
+                alert("✨ 正解！バッチリです！ ✨");
+            } else {
+                alert("❌ 残念！使う形が違うみたい。");
+            }
+            currentNum++;
+            nextQuestion();
+        }
+
+        function startTimer() {
+            if(timerId) clearInterval(timerId);
+            timerId = setInterval(() => {
+                timeLeft--;
+                document.getElementById('time-left').innerText = timeLeft;
+                if(timeLeft <= 0) {
+                    clearInterval(timerId);
+                    alert("タイムアップ！");
+                    currentNum++;
+                    nextQuestion();
+                }
+            }, 1000);
+        }
+
+        function finishGame() {
+            clearInterval(timerId);
+            alert("お疲れ様でした！\n" + totalQuestions + " 問中、 " + correctCount + " 問正解です！");
+            document.getElementById('setup-area').style.display = 'inline-block';
+            document.getElementById('game-status').style.display = 'none';
+            document.getElementById('judge-btn').style.display = 'none';
+            layer.destroyChildren();
+            layer.batchDraw();
+        }
+    </script>
+</body>
+</html>
