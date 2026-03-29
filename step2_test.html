@@ -199,4 +199,45 @@
                 document.getElementById('msg').innerText = "❌ おしい！";
                 document.getElementById('msg').style.color = "#e57373";
             }
-            user
+            userPieces.forEach(p => p.draggable(false));
+            currentNum++;
+            setTimeout(nextQuestion, 1500);
+        }
+
+        function startTimer() {
+            if(timerId) clearInterval(timerId);
+            timerId = setInterval(() => {
+                timeLeft--;
+                document.getElementById('time-left').innerText = timeLeft;
+                if(timeLeft <= 0) {
+                    clearInterval(timerId);
+                    document.getElementById('msg').innerText = "⏰ タイムアップ！";
+                    document.getElementById('msg').style.color = "#ff9800";
+                    userPieces.forEach(p => p.draggable(false));
+                    currentNum++;
+                    setTimeout(nextQuestion, 1500);
+                }
+            }, 1000);
+        }
+
+        function finishGame() {
+            clearInterval(timerId);
+            document.getElementById('game-status').style.display = 'none';
+            document.getElementById('judge-btn').style.display = 'none';
+            layer.destroyChildren();
+            layer.batchDraw();
+            document.getElementById('msg').innerHTML = `🏁 結果：${totalQuestions}問中 ${correctCount}問正解！`;
+            document.getElementById('msg').style.color = "#5a4a42";
+            document.getElementById('retry-btn').style.display = 'inline-block';
+        }
+
+        function resetToSetup() {
+            document.getElementById('setup-area').style.display = 'inline-block';
+            document.getElementById('retry-btn').style.display = 'none';
+            document.getElementById('msg').innerText = "";
+            layer.destroyChildren();
+            layer.batchDraw();
+        }
+    </script>
+</body>
+</html>
