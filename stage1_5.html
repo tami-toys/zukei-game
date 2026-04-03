@@ -3,27 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>図形合わせトレーニング - 1.5</title>
+    <title>図形合わせ1.5 - 重なり防止版</title>
     <style>
         body { text-align: center; font-family: sans-serif; background: #fff4f4; margin: 0; padding: 10px; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; }
         .header-area { background: white; padding: 12px; border-radius: 15px; margin-bottom: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         h1 { font-size: 22px; margin: 0; color: #d32f2f; }
         .instructions { font-size: 16px; font-weight: bold; color: #5a4a42; margin: 5px 0; }
-
         #game-canvas { background: #ffffff; border: 3px solid #d32f2f; border-radius: 15px; max-width: 100%; height: auto; display: block; margin: 0 auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        
         .btn-group { margin-top: 10px; display: flex; justify-content: center; gap: 20px; }
-        button { border: none; padding: 15px 40px; font-size: 22px; border-radius: 15px; cursor: pointer; color: white; font-weight: bold; transition: 0.2s; }
-        #same-btn { background: #4caf50; box-shadow: 0 5px #388e3c; }
-        #diff-btn { background: #f44336; box-shadow: 0 5px #d32f2f; }
-        #start-btn { background: #ff7043; box-shadow: 0 5px #d84315; }
-        #retry-btn { background: #8fbeb3; box-shadow: 0 5px #6a9a8f; display: none; }
-        button:active { transform: translateY(3px); box-shadow: none; }
-
+        button { border: none; padding: 15px 40px; font-size: 22px; border-radius: 15px; cursor: pointer; color: white; font-weight: bold; box-shadow: 0 5px rgba(0,0,0,0.2); }
+        #same-btn { background: #4caf50; }
+        #diff-btn { background: #f44336; }
+        #start-btn { background: #ff7043; }
+        #retry-btn { background: #8fbeb3; display: none; }
         #setup { background: white; padding: 25px; border-radius: 20px; display: inline-block; margin-top: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: left; }
         .setting-item { margin: 15px 0; font-size: 18px; font-weight: bold; }
         input[type="range"] { width: 160px; vertical-align: middle; }
-        
         #status-bar { font-size: 18px; font-weight: bold; margin-bottom: 5px; display: none; }
         #timer { color: #e57373; font-size: 22px; }
         #msg { font-size: 24px; font-weight: bold; margin-top: 10px; min-height: 35px; }
@@ -86,20 +81,48 @@
         type === 'cross' ? ctx.stroke() : (ctx.fill(), ctx.stroke());
     }
 
+    // ★重なりを防止して座標を生成する関数★
+    function getGridPositions(offsetX, count) {
+        let positions = [];
+        let cells = [0, 1, 2, 3, 4, 5, 6, 7, 8]; // 3x3のマス目
+        cells.sort(() => Math.random() - 0.5); // マス目をシャッフル
+
+        for (let i = 0; i < count; i++) {
+            let cellIndex = cells[i];
+            let row = Math.floor(cellIndex / 3);
+            let col = cellIndex % 3;
+            
+            // 各マスの中心座標を計算し、少しランダムにずらす(ゆらぎ)
+            let x = offsetX + 100 + col * 100 + (Math.random() * 40 - 20);
+            let y = 100 + row * 100 + (Math.random() * 40 - 20);
+            positions.push({ x, y });
+        }
+        return positions;
+    }
+
     function createProblem() {
         leftShapes = []; rightShapes = [];
-        // 正解が「同じ」か「違う」かをランダムに決める
         isCorrectSame = Math.random() > 0.5;
         
         let basePool = [...shapeTypes].sort(() => Math.random() - 0.5).slice(0, 3);
         let otherPool = [...shapeTypes].filter(s => !basePool.includes(s));
 
+        // グリッド座標を取得
+        let rightPos = getGridPositions(460, 3);
+        let leftPos = getGridPositions(40, 3);
+
         // 右（見本）の作成
-        basePool.forEach(s => rightShapes.push({ type: s.name, color: s.color, x: 460 + 60 + Math.random()*280, y: 50 + 60 + Math.random()*280 }));
+        basePool.forEach((s, i) => {
+            rightShapes.push({ type: s.name, color: s.color, x: rightPos[i].x, y: rightPos[i].y });
+        });
 
         // 左（問題）の作成
-        let leftPool = isCorrectSame ? basePool : [...basePool.slice(0, 2), otherPool[0]];
-        leftPool.forEach(s => leftShapes.push({ type: s.name, color: s.color, x: 40 + 60 + Math.random()*280, y: 50 + 60 + Math.random()*280 }));
+        let leftPool = isCorrectSame ? [...basePool] : [...basePool.slice(0, 2), otherPool[0]];
+        leftPool.sort(() => Math.random() - 0.5); // 順番を入れ替えて位置を変える
+        
+        leftPool.forEach((s, i) => {
+            leftShapes.push({ type: s.name, color: s.color, x: leftPos[i].x, y: leftPos[i].y });
+        });
     }
 
     function startGame() {
